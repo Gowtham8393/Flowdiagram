@@ -1,28 +1,51 @@
-## Data Pipeline Workflow
+# Insurance Loan Data Pipeline
 
 ```mermaid
-flowchart TD
+flowchart LR
 
-    A[JSON Files land in S3] --> B[Snowpipe Auto-Ingest]
-    B --> C[TBL_ME_RAW]
+    subgraph External Source
+        S3[Amazon S3<br>JSON Files]
+    end
 
-    C --> D[STREAM_ME_RAW captures new records]
+    subgraph Snowflake Ingestion Layer
+        SNOWPIPE[Snowpipe Auto-Ingest]
+        RAW[TBL_ME_RAW]
+        STREAM_RAW[STREAM_ME_RAW]
+    end
 
-    D --> E[TASK_ME_RAW_TO_STG]
-    E --> F[SP_FLATTEN_TO_STG]
-    F --> G[TBL_ME_STG]
+    subgraph Transformation Layer
+        TASK_RAW[TASK_ME_RAW_TO_STG]
+        SP_FLATTEN[SP_FLATTEN_TO_STG]
+        STG[TBL_ME_STG]
+        STREAM_STG[STREAM_ME_STG]
+    end
 
-    G --> H[STREAM_ME_STG captures new staging records]
+    subgraph Curated & Analysis Layer
+        TASK_CURATED[TASK_ME_STG_TO_CURATED]
+        SP_MISMATCH[SP_MISMATCH_ANALYSIS]
+        CURATED[INSURANCE_LOAN_READER]
+    end
 
-    H --> I[TASK_ME_STG_TO_CURATED]
-    I --> J[SP_MISMATCH_ANALYSIS]
+    subgraph Logging & Audit
+        LOG[TBL_DL_LOG]
+    end
 
-    J --> K[INSURANCE_LOAN_READER (Curated Table)]
-    J --> L[Mismatch Analysis + Timestamp Update]
+    %% Flow
 
-    %% Logging
-    B --> M[TBL_DL_LOG]
-    E --> M
-    I --> M
-    J --> M
-```
+    S3 --> SNOWPIPE
+    SNOWPIPE --> RAW
+    RAW --> STREAM_RAW
+
+    STREAM_RAW --> TASK_RAW
+    TASK_RAW --> SP_FLATTEN
+    SP_FLATTEN --> STG
+
+    STG --> STREAM_STG
+    STREAM_STG --> TASK_CURATED
+    TASK_CURATED --> SP_MISMATCH
+
+    SP_MISMATCH --> CURATED
+    SP_MISMATCH -->|Mismatch Analysis + Timestamp Update| CURATED
+
+    TASK_RAW --> LOG
+    TASK_CURATED --> LOG
