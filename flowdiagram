@@ -1,0 +1,28 @@
+## Data Pipeline Workflow
+
+```mermaid
+flowchart TD
+
+    A[JSON Files land in S3] --> B[Snowpipe Auto-Ingest]
+    B --> C[TBL_ME_RAW]
+
+    C --> D[STREAM_ME_RAW captures new records]
+
+    D --> E[TASK_ME_RAW_TO_STG]
+    E --> F[SP_FLATTEN_TO_STG]
+    F --> G[TBL_ME_STG]
+
+    G --> H[STREAM_ME_STG captures new staging records]
+
+    H --> I[TASK_ME_STG_TO_CURATED]
+    I --> J[SP_MISMATCH_ANALYSIS]
+
+    J --> K[INSURANCE_LOAN_READER (Curated Table)]
+    J --> L[Mismatch Analysis + Timestamp Update]
+
+    %% Logging
+    B --> M[TBL_DL_LOG]
+    E --> M
+    I --> M
+    J --> M
+```
